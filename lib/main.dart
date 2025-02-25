@@ -5,21 +5,17 @@ import 'package:provider/provider.dart';
 import 'package:window_size/window_size.dart';
 
 void main() {
+  // Configures window size on desktop
   setupWindow();
+  
   runApp(
-  // Provide the model to all widgets within the app. We're using
-  // ChangeNotifierProvider because that's a simple way to rebuild
-  // widgets when a model changes. We could also just use
-  // Provider, but then we would have to listen to Counter ourselves.
-  //
-  // Read Provider's docs to learn about all the available providers.
-  ChangeNotifierProvider(
-  // Initialize the model in the builder. That way, Provider
-  // can own Counter's lifecycle, making sure to call `dispose`
-  // when not needed anymore.
-  create: (context) => Counter(),
-  child: const MyApp(),
-  ),
+    ChangeNotifierProvider(
+      // Initialize the model in the builder. That way, Provider
+      // can own Counter's lifecycle, making sure to call `dispose`
+      // when not needed anymore.
+      create: (context) => Counter(),
+      child: const MyApp(),
+    ),
   );
 }
 
@@ -43,25 +39,32 @@ void setupWindow() {
   }
 }
 
-/// Simplest possible model, with just one field.
-///
-/// [ChangeNotifier] is a class in `flutter:foundation`. [Counter] does
-/// _not_ depend on Provider.
+
 class Counter with ChangeNotifier {
   int value = 0;
   void increment() {
-    value += 1;
-    notifyListeners();
+    // Only increment if value is less than 99.
+    if (value < 99) {
+      value += 1;
+      notifyListeners();
+    }
   }
   void decrement() {
-    value -= 1;
+    // Only decrement if value is more than 0.
+    if (value > 0) {
+      value -= 1;
+      notifyListeners();
+    }
+  }
+  void setAge(int newAge) {
+    value = newAge.clamp(0,99).toInt();
     notifyListeners();
   }
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -77,56 +80,127 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key});
+
+  Color getBackgroundColor(int age) {
+    if (age <= 12) {
+      return Colors.lightBlue;
+    } else if (age <= 19) {
+      return Colors.lightGreen;
+    } else if (age <= 30) {
+      return Colors.yellow.shade200;
+    } else if (age <= 50) {
+      return Colors.orange;
+    } else {
+      return Colors.grey.shade300;
+    }
+  }
+
+  String getMessage(int age) {
+    if (age <= 12) {
+      return "You're a child!";
+    } else if (age <= 19) {
+      return "Teen!";
+    } else if (age <= 30) {
+      return "Young adult!";
+    } else if (age <= 50) {
+      return "Regular adult!";
+    } else {
+      return "Golden years!";
+    }  
+  }
+
+  Color getProgressColor(int age) {
+    if (age <= 33) {
+      return Colors.green;
+    } else if (age <= 67) {
+      return Colors.yellow;
+    } else {
+      return Colors.red;
+    }
+  }
   
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Age Counter'),
-        ),
-      
-      body: Center(
-        child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-       
-          Consumer<Counter>(
-            builder: (context, counter, child) => Text(
-              'I am ${counter.value} years old!',
-              style: Theme.of(context).textTheme.headlineMedium,
-              ),
+    return Consumer<Counter>(
+      builder: (context, counter, child) {
+        int age = counter.value;
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Age Counter'),
             ),
-          ],
-        ),
-      ),
-    
-    floatingActionButton: Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        
-        // Increment button
-        FloatingActionButton(
-          onPressed: () {
-       
-            var counter = context.read<Counter>();
-            counter.increment();
-            },
-          tooltip: 'Increment',
-          child: const Icon(Icons.add),
+          
+          // Set bg color
+          body: Container(
+            color: getBackgroundColor(age),
+            child: Center(
+              child: Column(
+  
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'I am ${counter.value} years old!',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    getMessage(age),
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 20),
+                  // Button row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                        // Increase age
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            var counter = context.read<Counter>();
+                            counter.increment();
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Increase age.'),
+                        ),
+                        const SizedBox(width: 20),
+                        // Decrease age
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            var counter = context.read<Counter>();
+                            counter.decrement();
+                          },
+                          icon: const Icon(Icons.remove),
+                          label: const Text('Reduce age.'),
+                        ),
+                      ],
+                    ),
+                    // Slider
+                    const SizedBox(height: 20),
+                    Slider(
+                      value: age.toDouble(),
+                      min: 0,
+                      max: 99,
+                      divisions: 99,
+                      label: age.toString(),
+                      onChanged: (double newValue){
+                        counter.setAge(newValue.toInt());
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    // Progress bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 30),
+                      child: LinearProgressIndicator(
+                        value: age / 99,
+                        backgroundColor: Colors.grey.shade300,
+                        valueColor: AlwaysStoppedAnimation(getProgressColor(age)),
+                        minHeight: 10,
+                      ),
+                    ),
+                  ],
+                ),
+            ),
           ),
-        
-        // Decrement button
-        FloatingActionButton(
-          onPressed: () {
-       
-            var counter = context.read<Counter>();
-            counter.decrement();
-            },
-          tooltip: 'Decrement',
-          child: const Icon(Icons.remove),
-          ),
-      ],
-    ),
+        );
+      },
     );
   }
 }
